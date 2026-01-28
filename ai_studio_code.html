@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tiferet - Synagogue Display</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- PapaParse for CSV -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    
+    <!-- Hebrew Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@300;500;700&family=Heebo:wght@300;400;700&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        /* Custom Styles & Backgrounds */
+        :root {
+            --color-gold: #d4af37;
+            --color-blue-dark: #1e3a8a;
+            --glass-bg: rgba(255, 255, 255, 0.9);
+        }
+
+        body {
+            font-family: 'Heebo', sans-serif;
+            background-color: #000;
+            color: #1a1a1a;
+            overflow: hidden; /* Prevent scrolling on TV */
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* --- BACKGROUND IMAGES CONFIGURATION --- */
+        
+        /* 1. Header Background */
+        .bg-area-header {
+            background-image: linear-gradient(to bottom, rgba(30, 58, 138, 0.95), rgba(30, 58, 138, 0.8)), 
+                              url('img/royal_bg_v3.png');
+            background-size: cover;
+            background-position: center;
+        }
+
+        /* 2. Sidebar Background */
+        .bg-area-sidebar {
+            background-image: linear-gradient(to left, rgba(255, 255, 255, 0.95), rgba(240, 240, 240, 0.9)),
+                              url('https://images.unsplash.com/photo-1598556776374-31d7742d45b5?auto=format&fit=crop&q=80');
+            background-size: cover;
+            background-position: center;
+        }
+
+        /* 3. Main Content Background (Behind slides) */
+        .bg-area-main {
+            background-image: url('img/royal_bg_v3.png'), 
+                              linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            background-color: #f0f9ff;
+			/* CHANGE THIS LINE: */
+            background-size: 100% 100%; 
+            
+            background-repeat: no-repeat;
+			 background-position: center;
+        }
+
+        /* TV Aspect Ratio Container */
+        .tv-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+            background: white;
+        }
+
+        /* Aspect Ratio Logic for Large Screens to ensure 16:9 if desired, 
+           currently set to fill screen for Kiosk mode */
+        @media (min-width: 1024px) {
+            .tv-container {
+                max-width: 100%;
+                /* If you want strict 16:9 on ultra-wide monitors, uncomment below: */
+                /* aspect-ratio: 16/9; margin: auto; */
+            }
+        }
+
+        /* Typography */
+        h1, h2, h3, .serif {
+            font-family: 'Frank Ruhl Libre', serif;
+        }
+
+        /* Slide Animations */
+        .slide-enter {
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Progress Bar */
+        .progress-bar {
+            transition: width linear;
+        }
+
+        /* Zmanim Scroll */
+        .zmanim-container {
+            overflow-y: hidden;
+            position: relative;
+        }
+        
+        /* Specific Slide Styles */
+        .slide-card {
+            box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255,255,255,0.5);
+        }
+        
+        .ornament-border {
+            border: 2px solid var(--color-gold);
+            outline: 4px double var(--color-gold);
+            outline-offset: 4px;
+        }
+
+        /* Mobile Adjustments */
+        @media (max-width: 768px) {
+            body { overflow: auto; }
+            .tv-container { height: auto; min-height: 100vh; }
+            .layout-grid { flex-direction: column-reverse; } /* Sidebar on bottom for mobile */
+            .sidebar { width: 100%; height: auto; }
+            .main-content { width: 100%; min-height: 50vh; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="tv-container">
+        
+        <!-- HEADER -->
+        <header class="bg-area-header text-white p-4 shadow-lg z-10 flex justify-between items-center h-[12vh]">
+            <div class="flex items-center gap-4">
+                <div class="bg-white/10 p-3 rounded-full backdrop-blur-sm border border-white/20">
+                    <i data-lucide="star" class="w-8 h-8 text-yellow-400"></i>
+                </div>
+                <div>
+                    <h1 id="shul-name" class="text-3xl font-bold tracking-wide text-shadow">טוען שם בית הכנסת...</h1>
+                    <div id="date-display" class="text-blue-100 text-lg opacity-90 font-light"></div>
+                </div>
+            </div>
+            
+            <div class="text-left rtl:text-right flex flex-col items-end">
+                <div id="parsha-box" class="bg-blue-900/50 px-4 py-2 rounded-lg border border-blue-400/30 backdrop-blur-md">
+                    <span class="text-yellow-400 text-sm block">פרשת השבוע</span>
+                    <span id="parsha-name" class="text-xl font-bold">...</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- CONTENT GRID -->
+        <div class="flex flex-1 layout-grid h-[88vh]">
+            
+            <!-- MAIN CONTENT (CAROUSEL) -->
+            <main class="bg-area-main w-3/4 relative flex flex-col justify-between p-8 main-content overflow-hidden">
+                
+                <!-- Slide Display Area -->
+                <div id="slide-container" class="flex-1 flex items-center justify-center p-4">
+                    <!-- Dynamic Slide Content Goes Here -->
+                    <div class="text-gray-500 text-2xl animate-pulse">טוען מודעות...</div>
+                </div>
+
+                <!-- Footer / Progress -->
+                <div class="mt-6 flex justify-between items-center bg-white/60 p-3 rounded-xl backdrop-blur-sm">
+                    <div id="slide-dots" class="flex gap-2"></div>
+                    <div class="w-1/3 bg-gray-200 rounded-full h-2.5 dark:bg-gray-300 overflow-hidden">
+                        <div id="slide-progress" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+                    </div>
+                </div>
+            </main>
+
+            <!-- SIDEBAR -->
+            <aside class="bg-area-sidebar w-1/4 flex flex-col border-r border-gray-200 shadow-2xl sidebar z-20">
+                
+                <!-- Clock -->
+                <div class="p-6 text-center border-b border-gray-300 bg-white/50 backdrop-blur-sm">
+                    <div id="clock-time" class="text-5xl font-bold text-blue-900 mb-1" style="font-feature-settings: 'tnum'">00:00</div>
+                    <div id="clock-seconds" class="text-xl text-blue-600 font-mono">00</div>
+                </div>
+
+                <!-- Zmanim Title -->
+                <div class="p-3 bg-blue-900 text-white text-center font-bold tracking-wider shadow-inner">
+                    זמני היום - <span id="city-name">...</span>
+                </div>
+
+                <!-- Zmanim List -->
+                <div id="zmanim-list" class="flex-1 overflow-y-auto p-4 space-y-3 zmanim-container custom-scrollbar">
+                    <div class="text-center text-gray-500 mt-10">טוען זמנים...</div>
+                </div>
+
+                <!-- Footer Info -->
+                <div class="p-3 bg-gray-100 text-center text-xs text-gray-400 border-t">
+                    מערכת תפארת
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // --- CONFIGURATION ---
+        const SHEET_ID = '1vYXNWvbean4RVsGU2FmO93cF0nLtKeAotGs1bz3SBlY';
+        const GID_MESSAGES = '978725065';
+        const GID_SETTINGS = '1529497551';
+        
+        // Proxy URL to fetch CSV safely from Google Sheets
+        const getSheetUrl = (gid) => `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=${gid}`;
+
+        // State
+        const state = {
+            settings: {
+                ShulName: 'בית כנסת',
+                City: 'Jerusalem',
+                SlideDuration: 10,
+                ThemeColor: 'blue'
+            },
+            messages: [],
+            zmanim: [],
+            currentSlideIndex: 0,
+            intervalId: null,
+            parsha: ''
+        };
+
+        // --- CORE FUNCTIONS ---
+
+        async function init() {
+            lucide.createIcons();
+            startClock();
+            
+            try {
+                await fetchSettings();
+                updateStaticUI();
+                await fetchZmanimAndCalendar();
+                await fetchMessages();
+                
+                startCarousel();
+                
+                // Set auto-refresh intervals
+                setInterval(fetchMessages, 5 * 60 * 1000); // Messages every 5 mins
+                setInterval(fetchZmanimAndCalendar, 60 * 60 * 1000); // Zmanim every hour
+            } catch (error) {
+                console.error("Initialization Error:", error);
+                document.getElementById('slide-container').innerHTML = `<div class="text-red-600 text-xl font-bold">שגיאה בטעינת הנתונים: ${error.message}</div>`;
+            }
+        }
+
+        // 1. Fetch Settings
+        async function fetchSettings() {
+            return new Promise((resolve) => {
+                Papa.parse(getSheetUrl(GID_SETTINGS), {
+                    download: true,
+                    header: true,
+                    complete: (results) => {
+                        results.data.forEach(row => {
+                            if (row.Key && row.Value) {
+                                state.settings[row.Key] = row.Value;
+                            }
+                        });
+                        resolve();
+                    },
+                    error: (err) => {
+                        console.error("Settings Error", err);
+                        resolve(); // Proceed with defaults
+                    }
+                });
+            });
+        }
+
+        // 2. Fetch Zmanim & Calendar (Hebcal API)
+        async function fetchZmanimAndCalendar() {
+            const city = state.settings.City || 'Jerusalem';
+            const today = new Date().toISOString().split('T')[0];
+            
+            // Fetch Zmanim
+            const zmanimUrl = `https://www.hebcal.com/zmanim?cfg=json&city=${city}&date=${today}`;
+            // Fetch Calendar (Parsha, Hebrew Date)
+            const calUrl = `https://www.hebcal.com/converter?cfg=json&date=${today}&g2h=1&strict=1`;
+            const shabbatUrl = `https://www.hebcal.com/shabbat?cfg=json&city=${city}`;
+
+            try {
+                const [zmanimRes, calRes, shabbatRes] = await Promise.all([
+                    fetch(zmanimUrl).then(r => r.json()),
+                    fetch(calUrl).then(r => r.json()),
+                    fetch(shabbatUrl).then(r => r.json())
+                ]);
+
+                // Update Header Date
+                document.getElementById('date-display').innerText = `${calRes.hebrew} | ${new Date().toLocaleDateString('he-IL')}`;
+                
+                // Update Parsha (Need to look into Shabbat response for next Parsha)
+                const parshaItem = shabbatRes.items.find(i => i.category === 'parashat');
+                if (parshaItem) {
+                    state.parsha = parshaItem.hebrew;
+                    document.getElementById('parsha-name').innerText = parshaItem.hebrew;
+                } else {
+                    document.getElementById('parsha-name').innerText = "---";
+                }
+
+                // Process Zmanim for Sidebar
+                renderZmanim(zmanimRes.times);
+
+            } catch (e) {
+                console.error("Hebcal Error", e);
+            }
+        }
+
+        function renderZmanim(times) {
+            const list = document.getElementById('zmanim-list');
+            list.innerHTML = '';
+
+            const zmanimMap = [
+                { key: 'alotHaShachar', label: 'עלות השחר' },
+                { key: 'talismaza', label: 'זמן טו"ת' },
+                { key: 'sunrise', label: 'הנץ החמה' },
+                { key: 'sofZmanShma', label: 'סוזק"ש (גר"א)' },
+                { key: 'sofZmanTfila', label: 'סוף זמן תפילה' },
+                { key: 'chatzot', label: 'חצות היום' },
+                { key: 'minchaGedola', label: 'מנחה גדולה' },
+                { key: 'plagHaMincha', label: 'פלג המנחה' },
+                { key: 'sunset', label: 'שקיעה' },
+                { key: 'tzeit7083deg', label: 'צאת הכוכבים' }
+            ];
+
+            zmanimMap.forEach(z => {
+                if (times[z.key]) {
+                    const timeDate = new Date(times[z.key]);
+                    const timeStr = timeDate.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+                    
+                    const el = document.createElement('div');
+                    el.className = "flex justify-between items-center p-2 border-b border-gray-200 hover:bg-blue-50 transition-colors";
+                    el.innerHTML = `
+                        <span class="font-medium text-gray-700 text-lg">${z.label}</span>
+                        <span class="font-bold text-blue-800 text-xl font-mono">${timeStr}</span>
+                    `;
+                    list.appendChild(el);
+                }
+            });
+        }
+
+        // 3. Fetch Messages
+        async function fetchMessages() {
+            return new Promise((resolve) => {
+                Papa.parse(getSheetUrl(GID_MESSAGES), {
+                    download: true,
+                    header: true,
+                    complete: (results) => {
+                        const now = new Date();
+                        now.setHours(0,0,0,0);
+
+                        state.messages = results.data.filter(msg => {
+                            if(!msg.startDate || !msg.endDate) return false;
+                            
+                            // Parse DD/MM/YYYY or YYYY-MM-DD
+                            const start = parseDate(msg.startDate);
+                            const end = parseDate(msg.endDate);
+                            
+                            // Check if active
+                            return start <= now && end >= now;
+                        });
+                        
+                        // If no messages, add a default placeholder
+                        if (state.messages.length === 0) {
+                            state.messages.push({
+                                type: 'info',
+                                title: 'ברוכים הבאים',
+                                body: 'אין הודעות חדשות להיום.',
+                                id: 'default'
+                            });
+                        }
+                        
+                        renderDots();
+                        resolve();
+                    }
+                });
+            });
+        }
+
+        // Helper: Parse Date loosely
+        function parseDate(dateStr) {
+            if (!dateStr) return new Date(0);
+            // Handle Excel serial dates if necessary, but assuming text here
+            if (dateStr.includes('/')) {
+                const parts = dateStr.split('/');
+                // Assume DD/MM/YYYY
+                return new Date(parts[2], parts[1]-1, parts[0]);
+            }
+            return new Date(dateStr);
+        }
+
+        // 4. UI Rendering
+        function updateStaticUI() {
+            document.getElementById('shul-name').innerText = state.settings.ShulName;
+            document.getElementById('city-name').innerText = state.settings.City;
+        }
+
+        function startClock() {
+            setInterval(() => {
+                const now = new Date();
+                document.getElementById('clock-time').innerText = now.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+                document.getElementById('clock-seconds').innerText = now.getSeconds().toString().padStart(2, '0');
+            }, 1000);
+        }
+
+        // 5. Carousel Logic
+        function startCarousel() {
+            if (state.intervalId) clearInterval(state.intervalId);
+            renderSlide(0);
+            
+            const duration = (state.settings.SlideDuration || 10) * 1000;
+            
+            // Progress Bar Animation
+            const progressBar = document.getElementById('slide-progress');
+            progressBar.style.transition = `width ${duration}ms linear`;
+            
+            // Loop
+            const cycle = () => {
+                // Reset Progress Bar
+                progressBar.style.transition = 'none';
+                progressBar.style.width = '0%';
+                
+                setTimeout(() => {
+                    progressBar.style.transition = `width ${duration}ms linear`;
+                    progressBar.style.width = '100%';
+                }, 50);
+
+                state.currentSlideIndex = (state.currentSlideIndex + 1) % state.messages.length;
+                renderSlide(state.currentSlideIndex);
+            };
+
+            // Initial trigger
+            cycle(); // Show first immediately
+            state.intervalId = setInterval(cycle, duration);
+        }
+
+        function renderDots() {
+            const container = document.getElementById('slide-dots');
+            container.innerHTML = state.messages.map((_, idx) => `
+                <div class="w-2.5 h-2.5 rounded-full transition-all duration-300 ${idx === 0 ? 'bg-blue-600 scale-125' : 'bg-gray-300'}" id="dot-${idx}"></div>
+            `).join('');
+        }
+
+        function updateDots(activeIdx) {
+            state.messages.forEach((_, idx) => {
+                const dot = document.getElementById(`dot-${idx}`);
+                if (dot) {
+                    dot.className = `w-2.5 h-2.5 rounded-full transition-all duration-300 ${idx === activeIdx ? 'bg-blue-600 scale-125' : 'bg-gray-300'}`;
+                }
+            });
+        }
+
+        function renderSlide(index) {
+            const data = state.messages[index];
+            if (!data) return;
+
+            const container = document.getElementById('slide-container');
+            updateDots(index);
+
+            // Determine Theme classes based on 'type'
+            let bgClass = "bg-white/90";
+            let borderClass = "border-t-4 border-blue-500";
+            let icon = "info";
+            let iconColor = "text-blue-500";
+            let titleClass = "text-blue-900";
+
+            if (data.type === 'alert') {
+                bgClass = "bg-red-50";
+                borderClass = "border-t-4 border-red-600";
+                icon = "alert-triangle";
+                iconColor = "text-red-600";
+                titleClass = "text-red-800";
+            } else if (data.type === 'mazaltov') {
+                bgClass = "bg-yellow-50 ornament-border";
+                borderClass = "";
+                icon = "crown";
+                iconColor = "text-yellow-600";
+                titleClass = "text-yellow-800";
+            } else if (data.type === 'memorial') {
+                bgClass = "bg-gray-100";
+                borderClass = "border-l-4 border-gray-500";
+                icon = "candle";
+                iconColor = "text-gray-600";
+            }
+
+            // Image Slide Handling
+            if (data.type === 'image' && data.imageUrl) {
+                container.innerHTML = `
+                    <div class="w-full h-full flex items-center justify-center slide-enter">
+                        <img src="${data.imageUrl}" class="max-h-full max-w-full rounded-xl shadow-2xl object-contain border-4 border-white" />
+                    </div>
+                `;
+                return;
+            }
+
+            // Standard Text Slide
+            container.innerHTML = `
+                <div class="${bgClass} ${borderClass} w-full max-w-4xl p-10 rounded-2xl shadow-2xl slide-card slide-enter flex flex-col items-center text-center relative overflow-hidden backdrop-blur-md">
+                    <!-- Icon Background Watermark -->
+                    <i data-lucide="${icon}" class="absolute -bottom-10 -right-10 w-64 h-64 text-black/5 rotate-12 z-0"></i>
+                    
+                    <div class="z-10 w-full">
+                        <div class="mb-6 flex justify-center">
+                            <div class="p-4 rounded-full bg-white shadow-md">
+                                <i data-lucide="${icon}" class="w-12 h-12 ${iconColor}"></i>
+                            </div>
+                        </div>
+                        
+                        <h2 class="text-5xl font-bold mb-8 ${titleClass} tracking-tight leading-tight">
+                            ${data.title}
+                        </h2>
+                        
+                        <div class="text-3xl text-gray-700 leading-relaxed font-light whitespace-pre-line serif">
+                            ${data.body}
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            lucide.createIcons();
+        }
+
+        // Initialize App
+        window.addEventListener('DOMContentLoaded', init);
+
+    </script>
+</body>
+</html>
