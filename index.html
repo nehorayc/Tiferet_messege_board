@@ -143,27 +143,36 @@
     <div class="tv-container">
         
         <!-- HEADER -->
-        <header class="bg-area-header text-white p-4 shadow-lg z-10 flex justify-between items-center h-[12vh]">
+        <header class="bg-area-header text-white p-4 shadow-lg z-10 flex justify-between items-center h-[16vh]">
             <div class="flex items-center gap-4">
                 <div class="bg-white/10 p-3 rounded-full backdrop-blur-sm border border-white/20">
                     <i data-lucide="star" class="w-8 h-8 text-yellow-400"></i>
                 </div>
                 <div>
-                    <h1 id="shul-name" class="text-3xl font-bold tracking-wide text-shadow">טוען שם בית הכנסת...</h1>
-                    <div id="date-display" class="text-blue-100 text-lg opacity-90 font-light"></div>
+                    <h1 id="shul-name" class="text-2xl font-bold tracking-wide text-shadow">טוען שם בית הכנסת...</h1>
+                    <div id="date-display" class="text-blue-100 text-base opacity-90 font-light"></div>
                 </div>
             </div>
             
-            <div class="text-left rtl:text-right flex flex-col items-end">
-                <div id="parsha-box" class="bg-blue-900/50 px-4 py-2 rounded-lg border border-blue-400/30 backdrop-blur-md">
-                    <span class="text-yellow-400 text-sm block">פרשת השבוע</span>
-                    <span id="parsha-name" class="text-xl font-bold">...</span>
+            <!-- Centered Parasha and Shabbat Times -->
+            <div class="absolute left-1/2 transform -translate-x-1/2 text-center">
+                <div class="bg-blue-900/50 px-6 py-3 rounded-lg border border-blue-400/30 backdrop-blur-md mb-2">
+                    <span class="text-yellow-400 text-xl block mb-2">פרשת השבוע</span>
+                    <span id="parsha-name" class="text-5xl font-bold block">...</span>
+                </div>
+                <div class="flex gap-4 justify-center">
+                    <div class="bg-blue-900/50 px-4 py-2 rounded-lg border border-blue-400/30 backdrop-blur-md">
+                        <div id="shabbat-candle" class="text-white text-2xl font-bold">...</div>
+                    </div>
+                    <div class="bg-blue-900/50 px-4 py-2 rounded-lg border border-blue-400/30 backdrop-blur-md">
+                        <div id="shabbat-havdalah" class="text-white text-2xl font-bold">...</div>
+                    </div>
                 </div>
             </div>
         </header>
 
         <!-- CONTENT GRID -->
-        <div class="flex flex-1 layout-grid h-[88vh]">
+        <div class="flex flex-1 layout-grid h-[84vh]">
             
             <!-- MAIN CONTENT (CAROUSEL) -->
             <main class="bg-area-main w-3/4 relative flex flex-col justify-between p-8 main-content overflow-hidden">
@@ -301,13 +310,33 @@
                 // Update Header Date
                 document.getElementById('date-display').innerText = `${calRes.hebrew} | ${new Date().toLocaleDateString('he-IL')}`;
                 
-                // Update Parsha (Need to look into Shabbat response for next Parsha)
+                // Update Parsha and Shabbat Times
                 const parshaItem = shabbatRes.items.find(i => i.category === 'parashat');
                 if (parshaItem) {
                     state.parsha = parshaItem.hebrew;
                     document.getElementById('parsha-name').innerText = parshaItem.hebrew;
                 } else {
                     document.getElementById('parsha-name').innerText = "---";
+                }
+
+                // Update Shabbat Times in Header
+                const candleItem = shabbatRes.items.find(i => i.category === 'candles');
+                const havdalahItem = shabbatRes.items.find(i => i.category === 'havdalah');
+                
+                if (candleItem) {
+                    const candleTime = new Date(candleItem.date).toLocaleTimeString('he-IL', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                    });
+                    document.getElementById('shabbat-candle').innerHTML = `<span class="text-yellow-300">הדלקת נרות:</span> ${candleTime}`;
+                }
+                
+                if (havdalahItem) {
+                    const havdalahTime = new Date(havdalahItem.date).toLocaleTimeString('he-IL', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                    });
+                    document.getElementById('shabbat-havdalah').innerHTML = `<span class="text-yellow-300">הבדלה:</span> ${havdalahTime}`;
                 }
 
                 // Process Zmanim for Sidebar
